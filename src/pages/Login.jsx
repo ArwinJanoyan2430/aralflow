@@ -1,8 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import Form from "../components/Form";
 
-function Login({ onLogin, onSignup }) {
+function Login() {
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -19,7 +22,7 @@ function Login({ onLogin, onSignup }) {
     setError("");
     setIsSigningIn(true);
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -30,7 +33,11 @@ function Login({ onLogin, onSignup }) {
       return;
     }
 
-    onLogin(data.user);
+    navigate("/");
+  };
+
+  const handleSignup = () => {
+    navigate("/signup");
   };
 
   return (
@@ -40,13 +47,13 @@ function Login({ onLogin, onSignup }) {
       error={error}
       footer={
         <p className="inter-font mt-4 text-center text-xs text-zinc-500">
-          Already have an account?{" "}
+          Dont have an account?{" "}
           <button
             type="button"
-            onClick={onSignup}
-            className="ibm-mono cursor-pointer text-xs text-blue-700 hover:text-blue-600"
+            onClick={handleSignup}
+            className="ibm-mono cursor-pointer text-xs text-zinc-800 hover:text-zinc-500"
           >
-            Sign in here
+            Sign up here
           </button>
         </p>
       }
@@ -83,3 +90,4 @@ function Login({ onLogin, onSignup }) {
 }
 
 export default Login;
+

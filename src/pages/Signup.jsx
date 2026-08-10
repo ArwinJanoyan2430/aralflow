@@ -1,8 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import Form from "../components/Form";
 
-function Signup({ onLogin, onLoginPage }) {
+function Signup() {
+  const navigate = useNavigate();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -55,7 +58,7 @@ function Signup({ onLogin, onLoginPage }) {
 
     // Email confirmation is disabled
     if (data.session) {
-      onLogin(data.user);
+      navigate("/");
       return;
     }
 
@@ -69,21 +72,8 @@ function Signup({ onLogin, onLoginPage }) {
     <Form
       onSubmit={handleSubmit}
       title="Create your account"
-      buttonText="Create account"
-      loading={loading}
+      buttonText={loading ? "Creating account..." : "Create account"}
       error={error}
-      footer={
-        <p className="inter-font mt-4 text-center text-xs text-zinc-500">
-          Already have an account?{" "}
-          <button
-            type="button"
-            onClick={onLoginPage}
-            className="ibm-mono cursor-pointer text-xs text-blue-700 hover:text-blue-600"
-          >
-            Sign in here
-          </button>
-        </p>
-      }
     >
       {/* Name */}
       <div className="mb-4">
@@ -144,6 +134,18 @@ function Signup({ onLogin, onLoginPage }) {
           className="inter-font w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-500"
         />
       </div>
+
+      {/* Login link */}
+      <p className="ibm-mono text-center text-xs text-zinc-500">
+        Already have an account?{" "}
+        <button
+          type="button"
+          onClick={() => navigate("/login")}
+          className="font-medium text-zinc-900 transition hover:text-zinc-500"
+        >
+          Sign in here
+        </button>
+      </p>
     </Form>
   );
 }

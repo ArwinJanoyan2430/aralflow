@@ -51,48 +51,26 @@ function App() {
         {/* Login */}
         <Route
           path="/login"
-          element={
-            session ? (
-              <Navigate to="/" replace />
-            ) : (
-              <Login />
-            )
-          }
+          element={session ? <Navigate to="/" replace /> : <Login />}
         />
 
         {/* Signup */}
         <Route
           path="/signup"
-          element={
-            session ? (
-              <Navigate to="/" replace />
-            ) : (
-              <Signup />
-            )
-          }
+          element={session ? <Navigate to="/" replace /> : <Signup />}
         />
 
         {/* Home */}
         <Route
           path="/"
-          element={
-            session ? (
-              <Home />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
+          element={session ? <Home /> : <Navigate to="/login" replace />}
         />
 
         {/* Practice Exam */}
         <Route
           path="/practice-exam"
           element={
-            session ? (
-              <PracticeExam />
-            ) : (
-              <Navigate to="/login" replace />
-            )
+            session ? <PracticeExam /> : <Navigate to="/login" replace />
           }
         />
 
