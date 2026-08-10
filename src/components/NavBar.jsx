@@ -6,6 +6,8 @@ import { supabase } from "../lib/supabase";
 function Navbar() {
   const [showNavbar, setShowNavbar] = useState(true);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [userName, setUserName] = useState("User");
+
   const lastScrollY = useRef(0);
 
   const [darkMode, setDarkMode] = useState(() => {
@@ -14,6 +16,33 @@ function Navbar() {
 
   const navigate = useNavigate();
 
+  // Get currently logged-in user's name
+  useEffect(() => {
+    const getUserName = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("users")
+        .select("name")
+        .eq("id", user.id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching user name:", error);
+        return;
+      }
+
+      setUserName(data?.name || "User");
+    };
+
+    getUserName();
+  }, []);
+
+  // Logout
   const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -29,6 +58,7 @@ function Navbar() {
     }
   };
 
+  // Dark mode
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
     localStorage.setItem("darkMode", darkMode);
@@ -38,6 +68,7 @@ function Navbar() {
     setDarkMode((previous) => !previous);
   };
 
+  // Hide/show navbar on scroll
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -70,12 +101,9 @@ function Navbar() {
       }`}
     >
       {/* Brand */}
-      <a
-        href="/"
-        className="pixel-font text-lg font-bold text-zinc-900 transition-colors dark:text-white"
-      >
+      <div className="font-semibold text-zinc-900 dark:text-white">
         AralFlow
-      </a>
+      </div>
 
       {/* Links */}
       <div className="hidden items-center justify-center gap-5 md:flex lg:gap-8">
@@ -117,8 +145,8 @@ function Navbar() {
         >
           <User className="h-4 w-4 shrink-0 text-zinc-500 dark:text-zinc-400" />
 
-          <span className="hidden text-sm font-medium text-zinc-700 dark:text-zinc-200 sm:block">
-            Arwin Janoyan
+          <span className="hidden max-w-32 truncate text-sm font-medium text-zinc-700 dark:text-zinc-200 sm:block">
+            {userName}
           </span>
 
           <ChevronDown
@@ -165,3 +193,4 @@ function Navbar() {
 }
 
 export default Navbar;
+
