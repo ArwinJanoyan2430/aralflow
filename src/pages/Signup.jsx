@@ -16,12 +16,14 @@ function Signup() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (
-      !name.trim() ||
-      !email.trim() ||
-      !password.trim() ||
-      !confirmPassword.trim()
-    ) {
+    const cleanName = name.trim();
+    const cleanEmail = email.trim().toLowerCase();
+
+    // -----------------------------
+    // Validation
+    // -----------------------------
+
+    if (!cleanName || !cleanEmail || !password || !confirmPassword) {
       setError("Please fill in all fields.");
       return;
     }
@@ -39,33 +41,80 @@ function Signup() {
     setError("");
     setLoading(true);
 
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: {
-        data: {
-          name: name.trim(),
-        },
-      },
-    });
+    try {
+      // -----------------------------
+      // Create Supabase Auth account
+      // -----------------------------
 
-    setLoading(false);
+      const { data, error: signupError } =
+        await supabase.auth.signUp({
+          email: cleanEmail,
+          password,
+          options: {
+            data: {
+              name: cleanName,
+            },
+          },
+        });
 
-    if (error) {
-      setError(error.message);
-      return;
+      console.log("Signup data:", data);
+      console.log("Signup error:", signupError);
+
+      // -----------------------------
+      // Signup error
+      // -----------------------------
+
+      if (signupError) {
+        const message = signupError.message.toLowerCase();
+
+        if (
+          message.includes("already registered") ||
+          message.includes("already exists") ||
+          message.includes("user already registered") ||
+          message.includes("email already") ||
+          message.includes("already been registered")
+        ) {
+          setError(
+            "This email is already registered. Please sign in or use a different email.",
+          );
+        } else {
+          setError(signupError.message);
+        }
+
+        return;
+      }
+
+      // -----------------------------
+      // Account created successfully
+      // -----------------------------
+
+      if (data?.user) {
+        // If Supabase returned a session,
+        // the user is already logged in.
+        if (data.session) {
+          navigate("/", { replace: true });
+          return;
+        }
+
+        // No session means email confirmation
+        // is still enabled in Supabase.
+        setError(
+          "Account created, but email confirmation is still enabled in Supabase. Disable email confirmation in your Supabase Authentication settings.",
+        );
+
+        return;
+      }
+
+      setError("Account could not be created. Please try again.");
+    } catch (err) {
+      console.error("Signup exception:", err);
+
+      setError(
+        "Something went wrong while creating your account. Please try again.",
+      );
+    } finally {
+      setLoading(false);
     }
-
-    // Email confirmation is disabled
-    if (data.session) {
-      navigate("/");
-      return;
-    }
-
-    // Email confirmation is enabled
-    setError(
-      "Account created! Please check your email to verify your account.",
-    );
   };
 
   return (
@@ -73,6 +122,7 @@ function Signup() {
       onSubmit={handleSubmit}
       title="Create your account"
       buttonText={loading ? "Creating account..." : "Create account"}
+      loading={loading}
       error={error}
     >
       {/* Name */}
@@ -86,7 +136,8 @@ function Signup() {
           value={name}
           onChange={(event) => setName(event.target.value)}
           placeholder="Arwin Janoyan"
-          className="inter-font w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-500"
+          disabled={loading}
+          className="inter-font w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-60"
         />
       </div>
 
@@ -101,7 +152,8 @@ function Signup() {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="student@example.com"
-          className="inter-font w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-500"
+          disabled={loading}
+          className="inter-font w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-60"
         />
       </div>
 
@@ -116,7 +168,8 @@ function Signup() {
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           placeholder="Create a password"
-          className="inter-font w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-500"
+          disabled={loading}
+          className="inter-font w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-60"
         />
       </div>
 
@@ -131,7 +184,8 @@ function Signup() {
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
           placeholder="Confirm your password"
-          className="inter-font w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-500"
+          disabled={loading}
+          className="inter-font w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-60"
         />
       </div>
 
@@ -141,9 +195,10 @@ function Signup() {
         <button
           type="button"
           onClick={() => navigate("/login")}
-          className="font-medium text-zinc-900 transition hover:text-zinc-500"
+          disabled={loading}
+          className="font-medium text-zinc-900 transition hover:text-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Sign in here
+          Login here
         </button>
       </p>
     </Form>
