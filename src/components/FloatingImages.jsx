@@ -25,8 +25,8 @@ function FloatingImages() {
         src={images[currentImage]}
         alt={`Floating image ${currentImage + 1}`}
         animate={{
-          y: [0, -10, 0, 10, 0],
-          rotate: [0, 5, 0, -5, 0],
+          y: [0, -20, 0, 20, 0],
+          rotate: [0, 10, 0, -10, 0],
         }}
         transition={{
           duration: 5,

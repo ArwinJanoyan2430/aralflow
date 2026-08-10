@@ -5,6 +5,9 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { Pencil, Trash2, File } from "lucide-react";
 
+//image
+import aralflow from "../assets/aralflow.png"
+
 function Home() {
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
@@ -406,8 +409,8 @@ function Home() {
             <div className="rounded-[32px] border border-zinc-200 bg-white p-3 shadow-[0_25px_80px_rgba(24,24,27,0.10)] transition-colors duration-300 dark:border-zinc-800 dark:bg-zinc-900">
               <div className="group rounded-[26px] border-2 border-dashed border-zinc-200 px-6 py-12 text-center transition duration-300 hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:bg-zinc-800 sm:px-10 sm:py-14">
                 {/* Upload icon */}
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-900 text-2xl text-white shadow-lg shadow-zinc-900/20 dark:bg-white dark:text-zinc-900">
-                  <File className="h-5 w-5" />
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-100 text-2xl text-white shadow-lg shadow-zinc-900/20 dark:bg-zinc-800 dark:text-zinc-900">
+                  <img src={aralflow} className="h-12 w-12" />
                 </div>
 
                 <h2 className="pixel-font mt-6 text-lg tracking-tight text-zinc-900 dark:text-white sm:text-xl">
@@ -419,9 +422,7 @@ function Home() {
                   practice exam.
                 </p>
 
-                {/* =================================
-                  QUESTION COUNT
-              ================================= */}
+
                 <div className="mx-auto mt-8 max-w-md">
                   <p className="ibm-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                     Number of questions
@@ -738,7 +739,7 @@ function Home() {
       )}
       
 
-      <section className="px-4 max-x-1xl pb-20 pt-32 sm:px-10 lg:px-80 dark:bg-zinc-950">
+      <section id="how-it-works" className="px-4 max-x-1xl pb-20 pt-32 sm:px-10 lg:px-80 dark:bg-zinc-950">
         <div className="text-center">
           <p className="ibm-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
             How it works
@@ -823,10 +824,7 @@ function Home() {
         </div>
       </section>
 
-      {/* =====================================
-    FEATURED
-===================================== */}
-      <section className="px-4 max-x-1xl pb-20 pt-32 sm:px-10 lg:px-80 dark:bg-zinc-950">
+      <section id="features" className="px-4 max-x-1xl pb-20 pt-10 sm:px-10 lg:px-80 dark:bg-zinc-950">
         <div className="text-center">
           <p className="ibm-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
             Featured
