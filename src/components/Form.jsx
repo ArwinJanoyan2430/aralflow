@@ -10,13 +10,10 @@ function Form({
   onSubmit,
 }) {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-zinc-50 px-4 py-10">
+    <div className="min-h-screen bg-zinc-50">
       {/* Background decorations */}
-      <div className="pointer-events-none absolute -left-32 -top-32 h-72 w-72 rounded-full bg-blue-100/50 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 -right-32 h-72 w-72 rounded-full bg-zinc-200/60 blur-3xl" />
-
-      <div className="relative mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-6xl items-center justify-center">
-        <div className="grid w-full items-center gap-12 lg:grid-cols-[1fr_420px]">
+      <div className="relative mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-6xl items-center px-4 sm:px-6 lg:px-8">
+        <div className="grid w-full items-center gap-10 lg:grid-cols-[1fr_420px]">
 
           {/* Left side */}
           <div className="hidden lg:block">
@@ -44,6 +41,7 @@ function Form({
 
           {/* Right side */}
           <div className="w-full">
+            
             {/* Branding */}
             <div className="mb-6 text-center">
               <h1 className="pixel-font text-3xl tracking-wide text-zinc-900">
