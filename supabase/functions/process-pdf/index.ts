@@ -334,10 +334,20 @@ ${studyText}
       throw new Error("Gemini did not generate valid questions.");
     }
 
-    if (exam.questions.length !== questionCount) {
-      throw new Error(
-        `Gemini generated ${exam.questions.length} questions instead of ${questionCount}.`,
-      );
+    for (const question of exam.questions) {
+      if (
+        !question.question ||
+        !Array.isArray(question.choices) ||
+        question.choices.length !== 4 ||
+        !question.answer ||
+        !question.explanation
+      ) {
+        throw new Error("One or more generated questions are invalid.");
+      }
+
+      if (!question.choices.includes(question.answer)) {
+        throw new Error("A generated answer does not match its choices.");
+      }
     }
 
     for (const question of exam.questions) {
