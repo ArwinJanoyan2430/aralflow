@@ -334,20 +334,18 @@ ${studyText}
       throw new Error("Gemini did not generate valid questions.");
     }
 
-    for (const question of exam.questions) {
-      if (
-        !question.question ||
-        !Array.isArray(question.choices) ||
-        question.choices.length !== 4 ||
-        !question.answer ||
-        !question.explanation
-      ) {
-        throw new Error("One or more generated questions are invalid.");
-      }
+    if (exam.questions.length < questionCount) {
+      throw new Error(
+        `Gemini generated only ${exam.questions.length} questions instead of ${questionCount}.`,
+      );
+    }
 
-      if (!question.choices.includes(question.answer)) {
-        throw new Error("A generated answer does not match its choices.");
-      }
+    if (exam.questions.length > questionCount) {
+      console.warn(
+        `Gemini generated ${exam.questions.length} questions. Trimming to ${questionCount}.`,
+      );
+
+      exam.questions = exam.questions.slice(0, questionCount);
     }
 
     for (const question of exam.questions) {
