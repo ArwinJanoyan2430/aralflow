@@ -1,0 +1,17 @@
+@import url("https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap");
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+.ibm-mono {
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.inter-font {
+  font-family: "Inter", sans-serif;
+}
+
+.pixel-font {
+  font-family: "Silkscreen", sans-serif;
+}
+
