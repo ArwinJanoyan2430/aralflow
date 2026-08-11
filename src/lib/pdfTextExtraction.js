@@ -1,8 +1,4 @@
-import * as pdfjs from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-import { createWorker } from "tesseract.js";
-
-pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 const MAX_CHARACTERS_PER_PAGE = 4_000;
 const MIN_EMBEDDED_TEXT_CHARACTERS = 30;
@@ -11,13 +7,20 @@ const OCR_RENDER_SCALE = 2;
 const normalizeText = (text) => text.replace(/\s+/g, " ").trim();
 
 export const extractPdfPageSections = async (file, onProgress) => {
+  // PDF.js is large, so load it only when the user processes a PDF instead of
+  // including it in the app's initial JavaScript bundle.
+  const pdfjs = await import("pdfjs-dist");
+  pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+
   const pdfData = new Uint8Array(await file.arrayBuffer());
-  const pdf = await pdfjs.getDocument({ data: pdfData }).promise;
+  const loadingTask = pdfjs.getDocument({ data: pdfData });
+  const pdf = await loadingTask.promise;
+  const totalPages = pdf.numPages;
   const pageSections = [];
   let ocrWorker = null;
 
   try {
-    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+    for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
       const page = await pdf.getPage(pageNumber);
       const textContent = await page.getTextContent();
       let text = normalizeText(
@@ -31,7 +34,11 @@ export const extractPdfPageSections = async (file, onProgress) => {
       // those pages and use OCR, keeping ordinary PDFs fast.
       if (text.length < MIN_EMBEDDED_TEXT_CHARACTERS) {
         usedOcr = true;
-        ocrWorker ??= await createWorker("eng");
+        if (!ocrWorker) {
+          // Tesseract is even heavier and is needed only for scanned pages.
+          const { createWorker } = await import("tesseract.js");
+          ocrWorker = await createWorker("eng");
+        }
 
         const viewport = page.getViewport({ scale: OCR_RENDER_SCALE });
         const canvas = document.createElement("canvas");
@@ -62,15 +69,21 @@ export const extractPdfPageSections = async (file, onProgress) => {
 
       onProgress?.({
         currentPage: pageNumber,
-        totalPages: pdf.numPages,
+        totalPages,
         usedOcr,
       });
 
-      page.cleanup();
+      page.cleanup?.();
     }
   } finally {
     await ocrWorker?.terminate();
-    await pdf.destroy();
+    // destroy() belongs to PDFDocumentLoadingTask in this PDF.js build, not
+    // consistently to the resolved PDFDocumentProxy.
+    if (typeof loadingTask.destroy === "function") {
+      await loadingTask.destroy();
+    } else {
+      await pdf.cleanup?.();
+    }
   }
 
   if (pageSections.length === 0) {
@@ -79,5 +92,5 @@ export const extractPdfPageSections = async (file, onProgress) => {
     );
   }
 
-  return { pageSections, totalPages: pdf.numPages };
+  return { pageSections, totalPages };
 };

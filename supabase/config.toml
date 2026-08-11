@@ -26,3 +26,8 @@ entrypoint = "./functions/process-pdf/index.ts"
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/delete-materials/index.ts"
+
+[functions.generate-notes]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/generate-notes/index.ts"

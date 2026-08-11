@@ -113,12 +113,18 @@ function Navbar() {
 
       {/* Links */}
       <div className="hidden items-center justify-center gap-5 md:flex lg:gap-6">
-
         <a
           href="/#materials"
           className="text-xs ibm-mono font-semibold text-zinc-600 transition hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
         >
           library
+        </a>
+
+        <a
+          href="/#study-mode"
+          className="text-xs ibm-mono font-semibold text-zinc-600 transition hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+        >
+          study mode
         </a>
 
         <a
@@ -129,18 +135,19 @@ function Navbar() {
         </a>
 
         <a
-          href="/#study-mode"
-          className="text-xs ibm-mono font-semibold text-zinc-600 transition hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
-        >
-          study mode
-        </a>
-        
-        <a
           href="/#todo-list"
           className="text-xs ibm-mono font-semibold text-zinc-600 transition hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
         >
           to-do
         </a>
+
+        <a
+          href="/#notes-generator"
+          className="text-xs ibm-mono font-semibold text-zinc-600 transition hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+        >
+          notes
+        </a>
+
       </div>
 
       {/* User Dropdown */}

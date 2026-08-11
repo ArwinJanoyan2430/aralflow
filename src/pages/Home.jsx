@@ -3,10 +3,11 @@ import NavBar from "../components/NavBar";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { Pencil, File } from "lucide-react";
+import { File, FileText, Pencil, X } from "lucide-react";
 import UpdateNotice from "../components/UpdateNotice";
 import { extractPdfPageSections } from "../lib/pdfTextExtraction";
 import toast from "react-hot-toast";
+import NotesGenerator from "../pages/NotesGenerator";
 
 //image
 import aralflow from "../assets/aralflow.png";
@@ -16,7 +17,15 @@ import Pomodoro from "../pages/Pomodoro";
 import ToDoList from "../pages/ToDoList";
 
 const displayFileName = (fileName) =>
-  fileName?.replace(/^\d+-/, "") || "Study material";
+  fileName?.replace(/^\d+(?:-\d+)?-/, "") || "Study material";
+
+const getSafeFileName = (fileName) =>
+  fileName.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-");
+
+const formatFileSize = (bytes) => {
+  if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 const PASSING_PERCENTAGE = 75;
 
@@ -26,6 +35,7 @@ function Home() {
 
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadAction, setUploadAction] = useState(null);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -40,6 +50,7 @@ function Home() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [notesMaterial, setNotesMaterial] = useState(null);
 
   const handleToggleSelectionMode = () => {
     setIsSelectionMode((previous) => !previous);
@@ -175,6 +186,7 @@ function Home() {
 
     setUploadError("");
     setIsUploading(true);
+    setUploadAction("exam");
     setGenerationProgress(20);
 
     try {
@@ -205,7 +217,6 @@ function Home() {
       // -----------------------------------------
       // Upload PDF to Storage
       // -----------------------------------------
-      
 
       const { data, error } = await supabase.storage
         .from("study-materials")
@@ -217,7 +228,6 @@ function Home() {
       if (error) {
         throw error;
       }
-
 
       setGenerationProgress(60);
       console.log("Uploaded:", data);
@@ -268,7 +278,6 @@ function Home() {
 
       setGenerationProgress(100);
       setSelectedFile(file);
-      
 
       // -----------------------------------------
       // Add new material to library
@@ -305,6 +314,77 @@ function Home() {
       );
     } finally {
       setIsUploading(false);
+      setUploadAction(null);
+      setGenerationProgress(0);
+    }
+  };
+
+  const handleAddPdfToLibrary = async () => {
+    if (!selectedFile || isUploading) return;
+
+    const file = selectedFile;
+    let uploadedPath = null;
+
+    setUploadError("");
+    setIsUploading(true);
+    setUploadAction("library");
+    setGenerationProgress(25);
+
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) throw userError;
+      if (!user) throw new Error("You must be signed in to upload a PDF.");
+
+      const safeName = getSafeFileName(file.name);
+      const storedName = `${file.lastModified}-${file.size}-${safeName}`;
+      const filePath = `${user.id}/${storedName}`;
+
+      const { data: storedFile, error: storageError } = await supabase.storage
+        .from("study-materials")
+        .upload(filePath, file, {
+          contentType: "application/pdf",
+          upsert: false,
+        });
+
+      if (storageError) throw storageError;
+      uploadedPath = storedFile.path;
+      setGenerationProgress(70);
+
+      const { data: material, error: materialError } = await supabase
+        .from("study_materials")
+        .insert({
+          user_id: user.id,
+          file_name: storedName,
+          file_path: storedFile.path,
+          question_count: 0,
+          exam: { title: "Practice Exam", questions: [] },
+        })
+        .select(
+          "id, user_id, file_name, file_path, question_count, exam, created_at",
+        )
+        .single();
+
+      if (materialError) throw materialError;
+
+      setGenerationProgress(100);
+      setMaterials((previous) => [material, ...previous]);
+      setSelectedFile(null);
+      toast.success("PDF added to your library!");
+    } catch (error) {
+      console.error("PDF library upload failed:", error);
+
+      if (uploadedPath) {
+        await supabase.storage.from("study-materials").remove([uploadedPath]);
+      }
+
+      setUploadError(error?.message || "Could not add this PDF to the library.");
+    } finally {
+      setIsUploading(false);
+      setUploadAction(null);
       setGenerationProgress(0);
     }
   };
@@ -374,6 +454,22 @@ function Home() {
     });
   };
 
+  const handleCreateNotes = (material) => {
+    setNotesMaterial({
+      id: material.id,
+      file_name: material.file_name,
+      file_path: material.file_path,
+      created_at: material.created_at,
+    });
+
+    requestAnimationFrame(() => {
+      document.getElementById("notes-generator")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  };
+
   const handleSelectMaterial = (id) => {
     setSelectedMaterials((previous) =>
       previous.includes(id)
@@ -417,6 +513,13 @@ function Home() {
         previous.filter((material) => !selectedMaterials.includes(material.id)),
       );
 
+      if (
+        notesMaterial &&
+        selectedMaterials.includes(notesMaterial.id)
+      ) {
+        setNotesMaterial(null);
+      }
+
       setSelectedMaterials([]);
     } catch (error) {
       console.error("Delete error:", error);
@@ -447,7 +550,8 @@ function Home() {
         throw new Error(downloadError?.message || "Failed to download PDF.");
       }
 
-      const { pageSections, totalPages } = await extractPdfPageSections(pdfFile);
+      const { pageSections, totalPages } =
+        await extractPdfPageSections(pdfFile);
 
       const { data: result, error: functionError } =
         await supabase.functions.invoke("process-pdf", {
@@ -516,7 +620,10 @@ function Home() {
               </span>
             </div>
 
-            <h1 id="start" className="pixel-font md:text-4xl text-4xl leading-tight tracking-tight text-zinc-950 transition-colors duration-300 dark:text-white sm:text-5xl lg:text-6xl">
+            <h1
+              id="start"
+              className="pixel-font md:text-4xl text-4xl leading-tight tracking-tight text-zinc-950 transition-colors duration-300 dark:text-white sm:text-5xl lg:text-6xl"
+            >
               Study from your notes.
               <span className="mt-2 block md:text-4xl text-3xl text-zinc-400 dark:text-zinc-500">
                 Practice like it's exam day.
@@ -599,40 +706,78 @@ function Home() {
                   className="hidden"
                 />
 
-                {/* Choose or generate PDF */}
-                <button
-                  type="button"
-                  onClick={selectedFile ? handleGenerate : handleChoosePDF}
-                  disabled={isUploading}
-                  className="inter-font relative mt-7 overflow-hidden rounded-full bg-zinc-900 px-7 py-3 text-sm font-semibold text-white shadow-lg shadow-zinc-900/15 transition hover:-translate-y-0.5 hover:bg-zinc-800 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
-                >
-                  {isUploading && (
-                    <span
-                      className="absolute inset-y-0 left-0 bg-white/20 transition-[width] duration-500 dark:bg-zinc-900/15"
-                      style={{ width: `${generationProgress}%` }}
-                    />
-                  )}
+                {!selectedFile && (
+                  <button
+                    type="button"
+                    onClick={handleChoosePDF}
+                    disabled={isUploading}
+                    className="inter-font mt-7 rounded-full bg-zinc-900 px-7 py-3 text-sm font-semibold text-white shadow-lg shadow-zinc-900/15 transition hover:-translate-y-0.5 hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+                  >
+                    Choose PDF
+                  </button>
+                )}
 
-                  <span className="relative z-10">
-                    {isUploading
-                      ? `Generating ${generationProgress}%`
-                      : selectedFile
-                        ? `Generate ${questionCount} questions`
-                        : "Choose PDF"}
-                  </span>
-                </button>
-
-                {!isUploading && (
+                {!selectedFile && !isUploading && (
                   <p className="inter-font mt-3 text-xs text-zinc-500 dark:text-zinc-400">
                     or drop a PDF anywhere in this card
                   </p>
                 )}
 
-                {/* Selected file */}
-                {selectedFile && !isUploading && (
-                  <p className="inter-font mt-4 text-sm text-emerald-600 dark:text-emerald-400">
-                    Selected: {selectedFile.name}
-                  </p>
+                {selectedFile && (
+                  <div className="mx-auto mt-7 max-w-md rounded-2xl border border-zinc-200 bg-white p-4 text-left dark:border-zinc-700 dark:bg-zinc-900">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800">
+                        <FileText size={19} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="inter-font truncate text-sm font-semibold">
+                          {selectedFile.name}
+                        </p>
+                        <p className="ibm-mono mt-1 text-[9px] uppercase tracking-wider text-zinc-400">
+                          {formatFileSize(selectedFile.size)} · PDF
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={isUploading}
+                        onClick={() => setSelectedFile(null)}
+                        aria-label="Remove selected PDF"
+                        className="rounded-full p-2 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-900 disabled:opacity-50 dark:hover:bg-zinc-800 dark:hover:text-white"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleGenerate}
+                      disabled={isUploading}
+                      className="inter-font relative mt-4 flex w-full items-center justify-center overflow-hidden rounded-xl bg-zinc-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-wait disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+                    >
+                      {isUploading && uploadAction === "exam" && (
+                        <span
+                          className="absolute inset-y-0 left-0 bg-white/20 transition-[width] duration-500 dark:bg-zinc-900/15"
+                          style={{ width: `${generationProgress}%` }}
+                        />
+                      )}
+                      <span className="relative z-10">
+                        {isUploading && uploadAction === "exam"
+                          ? `Generating ${generationProgress}%`
+                          : `Create ${questionCount}-question exam`}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleAddPdfToLibrary}
+                      disabled={isUploading}
+                      className="inter-font mt-2 flex w-full items-center justify-center rounded-xl border border-zinc-200 px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 disabled:cursor-wait disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                    >
+                      {isUploading && uploadAction === "library"
+                        ? `Adding to library ${generationProgress}%`
+                        : "Add to library"}
+                    </button>
+                  </div>
                 )}
 
                 {/* Error */}
@@ -666,7 +811,7 @@ function Home() {
         ===================================== */}
           <section id="materials" className="mx-auto mt-20 max-w-2xl">
             <div className="mb-6">
-              <p  className="ibm-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+              <p className="ibm-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                 Your library
               </p>
 
@@ -677,7 +822,8 @@ function Home() {
                   </h2>
 
                   <p className="inter-font mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-                    Manage your study materials, answer practice exams, and review completed results.
+                    Manage your study materials, answer practice exams, and
+                    review completed results.
                   </p>
                 </div>
 
@@ -719,7 +865,7 @@ function Home() {
               <div className="space-y-3">
                 {/* Selection toolbar */}
                 {isSelectionMode && (
-                  <div className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+                  <div className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-1 dark:border-zinc-800 dark:bg-zinc-900">
                     <span className="ibm-mono text-[10px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                       {selectedMaterials.length > 0
                         ? `${selectedMaterials.length} selected`
@@ -767,6 +913,9 @@ function Home() {
                         </div>
 
                         {section.materials.map((material) => {
+                          const hasExam =
+                            Array.isArray(material.exam?.questions) &&
+                            material.exam.questions.length > 0;
                           const isSelected = selectedMaterials.includes(
                             material.id,
                           );
@@ -813,7 +962,9 @@ function Home() {
 
                                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
                                   <span className="ibm-mono text-[9px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-                                    {material.question_count} questions
+                                    {hasExam
+                                      ? `${material.question_count} questions`
+                                      : "PDF only"}
                                   </span>
 
                                   <span className="text-zinc-300 dark:text-zinc-700">
@@ -866,7 +1017,7 @@ function Home() {
                                       Re-answer
                                     </button>
                                   </>
-                                ) : (
+                                ) : hasExam ? (
                                   <>
                                     <button
                                       type="button"
@@ -882,6 +1033,24 @@ function Home() {
                                       className="inter-font rounded-full bg-zinc-900 px-4 py-2.5 text-xs font-semibold text-white transition hover:-translate-y-0.5 hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
                                     >
                                       Answer
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCreateNotes(material)}
+                                      className="inter-font rounded-full border border-zinc-200 bg-white px-4 py-2.5 text-xs font-semibold text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
+                                    >
+                                      Create notes
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEdit(material)}
+                                      disabled={isEditing}
+                                      className="inter-font rounded-full border border-zinc-200 bg-white px-4 py-2.5 text-xs font-semibold text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
+                                    >
+                                      Create exam
                                     </button>
                                   </>
                                 )}
@@ -976,6 +1145,19 @@ function Home() {
                   : `Generate ${questionCount}`}
               </button>
             </div>
+
+            <button
+              type="button"
+              disabled={isEditing}
+              onClick={() => {
+                const material = editingMaterial;
+                setEditingMaterial(null);
+                handleCreateNotes(material);
+              }}
+              className="inter-font mt-3 w-full rounded-full border border-zinc-200 bg-zinc-50 px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
+            >
+              Create notes
+            </button>
           </div>
         </div>
       )}
@@ -985,6 +1167,14 @@ function Home() {
       </section>
 
       <ToDoList />
+
+      <section id="notes-generator">
+        <NotesGenerator
+          key={notesMaterial?.id || "empty-notes-generator"}
+          initialMaterial={notesMaterial}
+        />
+      </section>
+
       <Footer />
     </>
   );
