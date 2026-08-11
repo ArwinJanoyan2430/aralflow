@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { Pencil, File } from "lucide-react";
 import UpdateNotice from "../components/UpdateNotice";
-import { extractText, getDocumentProxy } from "unpdf";
+import { extractPdfPageSections } from "../lib/pdfTextExtraction";
 import toast from "react-hot-toast";
 
 //image
@@ -18,30 +18,7 @@ import ToDoList from "../pages/ToDoList";
 const displayFileName = (fileName) =>
   fileName?.replace(/^\d+-/, "") || "Study material";
 
-const MAX_CHARACTERS_PER_PAGE = 4_000;
 const PASSING_PERCENTAGE = 75;
-
-const extractPdfPageSections = async (file) => {
-  const pdfData = new Uint8Array(await file.arrayBuffer());
-  const pdf = await getDocumentProxy(pdfData);
-  const { totalPages, text: pageTexts } = await extractText(pdf);
-  const pageSections = pageTexts
-    .map((pageText, index) => {
-      const text = pageText.replace(/\s+/g, " ").trim();
-      return text
-        ? `[Page ${index + 1}]\n${text.slice(0, MAX_CHARACTERS_PER_PAGE)}`
-        : "";
-    })
-    .filter(Boolean);
-
-  if (pageSections.length === 0) {
-    throw new Error(
-      "No readable text was found in this PDF. It may be scanned or contain only images.",
-    );
-  }
-
-  return { pageSections, totalPages };
-};
 
 function Home() {
   const fileInputRef = useRef(null);
@@ -242,10 +219,19 @@ function Home() {
       }
 
 
-      setGenerationProgress(90);
+      setGenerationProgress(60);
       console.log("Uploaded:", data);
 
-      const { pageSections, totalPages } = await extractPdfPageSections(file);
+      const { pageSections, totalPages } = await extractPdfPageSections(
+        file,
+        ({ currentPage, totalPages: pageCount }) => {
+          setGenerationProgress(
+            60 + Math.round((currentPage / pageCount) * 28),
+          );
+        },
+      );
+
+      setGenerationProgress(90);
 
       // -----------------------------------------
       // Process PDF
@@ -680,7 +666,7 @@ function Home() {
         ===================================== */}
           <section id="materials" className="mx-auto mt-20 max-w-2xl">
             <div className="mb-6">
-              <p className="ibm-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+              <p  className="ibm-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
                 Your library
               </p>
 
@@ -999,164 +985,6 @@ function Home() {
       </section>
 
       <ToDoList />
-
-      <section
-        id="how-it-works"
-        className="px-4 transition-colors duration-300 bg-zinc-50 max-x-1xl pb-20 pt-32 sm:px-10 lg:px-80 dark:bg-zinc-950"
-      >
-        <div className="text-center">
-          <p className="ibm-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-            How it works
-          </p>
-
-          <h2 className="pixel-font mt-3 text-2xl tracking-tight text-zinc-900 dark:text-white sm:text-3xl">
-            From notes to practice.
-          </h2>
-
-          <p className="inter-font mx-auto mt-3 max-w-xl text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-            AralFlow turns your study materials into practice exams in just a
-            few simple steps.
-          </p>
-        </div>
-
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
-          {/* Step 01 */}
-          <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950">
-            <div className="flex items-center justify-between">
-              <span className="ibm-mono text-[10px] font-bold tracking-wider text-zinc-400 dark:text-zinc-500">
-                01
-              </span>
-
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-900 text-[10px] font-bold text-white dark:bg-white dark:text-zinc-900">
-                PDF
-              </div>
-            </div>
-
-            <h3 className="pixel-font mt-6 text-base text-zinc-900 dark:text-white">
-              Upload your notes
-            </h3>
-
-            <p className="inter-font mt-3 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-              Upload your PDF study material. AralFlow securely processes the
-              content so it can understand what you need to study.
-            </p>
-          </div>
-
-          {/* Step 02 */}
-          <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950">
-            <div className="flex items-center justify-between">
-              <span className="ibm-mono text-[10px] font-bold tracking-wider text-zinc-400 dark:text-zinc-500">
-                02
-              </span>
-
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-900 text-[10px] font-bold text-white dark:bg-white dark:text-zinc-900">
-                AI
-              </div>
-            </div>
-
-            <h3 className="pixel-font mt-6 text-base text-zinc-900 dark:text-white">
-              Generate your exam
-            </h3>
-
-            <p className="inter-font mt-3 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-              Choose how many questions you want and let AralFlow generate a
-              practice exam based on your uploaded material.
-            </p>
-          </div>
-
-          {/* Step 03 */}
-          <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950">
-            <div className="flex items-center justify-between">
-              <span className="ibm-mono text-[10px] font-bold tracking-wider text-zinc-400 dark:text-zinc-500">
-                03
-              </span>
-
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-900 text-[10px] font-bold text-white dark:bg-white dark:text-zinc-900">
-                ✓
-              </div>
-            </div>
-
-            <h3 className="pixel-font mt-6 text-base text-zinc-900 dark:text-white">
-              Practice & improve
-            </h3>
-
-            <p className="inter-font mt-3 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-              Take your interactive practice exam, review your answers, and
-              retake saved exams whenever you want.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section
-        className="px-4 transition-colors duration-300 bg-zinc-50 max-x-1xl pb-20 pt-0 sm:px-10 lg:px-80 dark:bg-zinc-950"
-      >
-        <div className="text-center">
-          <p className="ibm-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-            Featured
-          </p>
-
-          <h2 className="pixel-font mt-3 text-2xl tracking-tight text-zinc-900 dark:text-white sm:text-3xl">
-            Everything you need to study better.
-          </h2>
-
-          <p className="inter-font mx-auto mt-3 max-w-xl text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-            Simple tools designed to turn your study materials into effective
-            exam preparation.
-          </p>
-        </div>
-
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {/* Feature 1 */}
-          <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 text-xs font-bold text-white dark:bg-white dark:text-zinc-900">
-              AI
-            </div>
-
-            <h3 className="pixel-font mt-6 text-base text-zinc-900 dark:text-white">
-              AI-generated exams
-            </h3>
-
-            <p className="inter-font mt-3 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-              Turn your PDFs into customized practice questions using the
-              content of your own study materials.
-            </p>
-          </div>
-
-          {/* Feature 2 */}
-          <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 text-xs font-bold text-white dark:bg-white dark:text-zinc-900">
-              PDF
-            </div>
-
-            <h3 className="pixel-font mt-6 text-base text-zinc-900 dark:text-white">
-              PDF-based studying
-            </h3>
-
-            <p className="inter-font mt-3 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-              Upload your lecture notes, reviewers, and other PDF materials and
-              keep everything organized in one place.
-            </p>
-          </div>
-
-          {/* Feature 3 */}
-          <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 text-xs font-bold text-white dark:bg-white dark:text-zinc-900">
-              ↻
-            </div>
-
-            <h3 className="pixel-font mt-6 text-base text-zinc-900 dark:text-white">
-              Retake anytime
-            </h3>
-
-            <p className="inter-font mt-3 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-              Your generated exams are saved so you can return to them and
-              practice whenever you need.
-            </p>
-          </div>
-        </div>
-      </section>
-
       <Footer />
     </>
   );

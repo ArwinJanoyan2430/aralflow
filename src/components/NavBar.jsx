@@ -113,12 +113,6 @@ function Navbar() {
 
       {/* Links */}
       <div className="hidden items-center justify-center gap-5 md:flex lg:gap-6">
-        <a
-          href="/#how-it-works"
-          className="text-xs ibm-mono font-medium  text-zinc-600 transition hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
-        >
-          how it works
-        </a>
 
         <a
           href="/#materials"
