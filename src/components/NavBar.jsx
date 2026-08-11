@@ -4,6 +4,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import toast from "react-hot-toast";
 
+const mobileLinks = [
+  { label: "Library", href: "/#materials" },
+  { label: "Study mode", href: "/#study-mode" },
+  { label: "Upload PDF", href: "/#start" },
+  { label: "To-do", href: "/#todo-list" },
+  { label: "Notes", href: "/#notes-generator" },
+];
+
 function Navbar() {
   const [showNavbar, setShowNavbar] = useState(true);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -154,6 +162,8 @@ function Navbar() {
       <div className="relative shrink-0">
         <button
           type="button"
+          aria-label="Open user menu"
+          aria-expanded={showDropdown}
           onClick={() => setShowDropdown((previous) => !previous)}
           className="flex items-center gap-2 rounded-full border border-zinc-200/70 bg-white/60 px-2.5 py-2 backdrop-blur-md transition hover:bg-white dark:border-zinc-800/70 dark:bg-zinc-900/60 dark:hover:bg-zinc-900 sm:px-3"
         >
@@ -172,7 +182,25 @@ function Navbar() {
 
         {/* Dropdown */}
         {showDropdown && (
-          <div className="absolute right-0 top-[calc(100%+8px)] w-44 overflow-hidden rounded-2xl border border-zinc-200 bg-white/95 p-1.5 shadow-xl shadow-zinc-900/10 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95 dark:shadow-black/30">
+          <div className="absolute right-0 top-[calc(100%+8px)] w-52 overflow-hidden rounded-2xl border border-zinc-200 bg-white/95 p-1.5 shadow-xl shadow-zinc-900/10 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95 dark:shadow-black/30 md:w-44">
+            <div className="p-1 md:hidden">
+              <p className="ibm-mono px-2 pb-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">
+                Navigate
+              </p>
+              {mobileLinks.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setShowDropdown(false)}
+                  className="inter-font block rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-white"
+                >
+                  {link.label}
+                </a>
+              ))}
+            </div>
+
+            <div className="my-1 border-t border-zinc-100 dark:border-zinc-800 md:hidden" />
+
             {/* Dark Mode */}
             <button
               type="button"
