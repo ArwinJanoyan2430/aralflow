@@ -1,6 +1,6 @@
 function Footer() {
   return (
-    <footer className="bg-white dark:bg-zinc-950">
+    <footer className="transition-colors duration-300 bg-zinc-50 dark:bg-zinc-950">
       {/* Footer Content */}
       <div className="mx-auto max-w-6xl px-6 py-12 sm:px-8">
         <div className="flex flex-col justify-between gap-8 sm:flex-row sm:items-center">

@@ -13,6 +13,16 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const savedPreference = localStorage.getItem("darkMode");
+    const darkMode =
+      savedPreference !== null
+        ? savedPreference === "true"
+        : window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    document.documentElement.classList.toggle("dark", darkMode);
+  }, []);
+
+  useEffect(() => {
     const getSession = async () => {
       const { data, error } = await supabase.auth.getSession();
 

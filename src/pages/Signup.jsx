@@ -127,7 +127,7 @@ function Signup() {
     >
       {/* Name */}
       <div className="mb-4">
-        <label className="ibm-mono mb-2 block text-xs font-medium text-zinc-700">
+        <label className="ibm-mono mb-2 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
           Name
         </label>
 
@@ -137,13 +137,13 @@ function Signup() {
           onChange={(event) => setName(event.target.value)}
           placeholder="Arwin Janoyan"
           disabled={loading}
-          className="inter-font w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inter-font w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:placeholder:text-zinc-500"
         />
       </div>
 
       {/* Email */}
       <div className="mb-4">
-        <label className="ibm-mono mb-2 block text-xs font-medium text-zinc-700">
+        <label className="ibm-mono mb-2 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
           Email
         </label>
 
@@ -153,13 +153,13 @@ function Signup() {
           onChange={(event) => setEmail(event.target.value)}
           placeholder="student@example.com"
           disabled={loading}
-          className="inter-font w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inter-font w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:placeholder:text-zinc-500"
         />
       </div>
 
       {/* Password */}
       <div className="mb-4">
-        <label className="ibm-mono mb-2 block text-xs font-medium text-zinc-700">
+        <label className="ibm-mono mb-2 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
           Password
         </label>
 
@@ -169,13 +169,13 @@ function Signup() {
           onChange={(event) => setPassword(event.target.value)}
           placeholder="Create a password"
           disabled={loading}
-          className="inter-font w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inter-font w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:placeholder:text-zinc-500"
         />
       </div>
 
       {/* Confirm Password */}
       <div className="mb-4">
-        <label className="ibm-mono mb-2 block text-xs font-medium text-zinc-700">
+        <label className="ibm-mono mb-2 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
           Confirm Password
         </label>
 
@@ -185,18 +185,18 @@ function Signup() {
           onChange={(event) => setConfirmPassword(event.target.value)}
           placeholder="Confirm your password"
           disabled={loading}
-          className="inter-font w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inter-font w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:placeholder:text-zinc-500"
         />
       </div>
 
       {/* Login link */}
-      <p className="ibm-mono text-center text-xs text-zinc-500">
+      <p className="ibm-mono text-center text-xs text-zinc-500 dark:text-zinc-400">
         Already have an account?{" "}
         <button
           type="button"
           onClick={() => navigate("/login")}
           disabled={loading}
-          className="font-medium text-zinc-900 transition hover:text-zinc-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="font-medium text-zinc-900 transition hover:text-zinc-500 disabled:cursor-not-allowed disabled:opacity-50 dark:text-white dark:hover:text-zinc-400"
         >
           Login here
         </button>

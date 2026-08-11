@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { User, ChevronDown, Moon, Sun } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
 function Navbar() {
@@ -11,7 +11,13 @@ function Navbar() {
   const lastScrollY = useRef(0);
 
   const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem("darkMode") === "true";
+    const savedPreference = localStorage.getItem("darkMode");
+
+    if (savedPreference !== null) {
+      return savedPreference === "true";
+    }
+
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
 
   const navigate = useNavigate();
@@ -25,18 +31,9 @@ function Navbar() {
 
       if (!user) return;
 
-      const { data, error } = await supabase
-        .from("users")
-        .select("name")
-        .eq("id", user.id)
-        .single();
-
-      if (error) {
-        console.error("Error fetching user name:", error);
-        return;
-      }
-
-      setUserName(data?.name || "User");
+      // The name entered at sign-up is stored in Supabase Auth user metadata.
+      // Reading it here avoids relying on a separate public `users` table.
+      setUserName(user.user_metadata?.name?.trim() || "User");
     };
 
     getUserName();
@@ -65,7 +62,11 @@ function Navbar() {
   }, [darkMode]);
 
   const handleDarkMode = () => {
-    setDarkMode((previous) => !previous);
+    setDarkMode((previous) => {
+      const next = !previous;
+      localStorage.setItem("darkMode", String(next));
+      return next;
+    });
   };
 
   // Hide/show navbar on scroll
@@ -101,38 +102,48 @@ function Navbar() {
       }`}
     >
       {/* Brand */}
-      <div className="font-semibold text-zinc-900 dark:text-white">
+      <Link
+        to="/"
+        className="font-semibold pixel-font text-zinc-900 dark:text-white"
+      >
         AralFlow
-      </div>
+      </Link>
 
       {/* Links */}
-      <div className="hidden items-center justify-center gap-5 md:flex lg:gap-8">
+      <div className="hidden items-center justify-center gap-5 md:flex lg:gap-6">
         <a
-          href="#how-it-works"
-          className="text-sm font-medium text-zinc-600 transition hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+          href="/#how-it-works"
+          className="text-xs ibm-mono font-medium  text-zinc-600 transition hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
         >
-          How it works
+          how it works
         </a>
 
         <a
-          href="#features"
-          className="text-sm font-medium text-zinc-600 transition hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+          href="/#materials"
+          className="text-xs ibm-mono font-semibold text-zinc-600 transition hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
         >
-          Features
+          library
         </a>
 
         <a
-          href="#start"
-          className="text-sm font-semibold text-zinc-600 transition hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+          href="/#start"
+          className="text-xs pixel-font font-light bg-zinc-300 dark:bg-zinc-800 hover:dark:bg-zinc-700 hover:bg-zinc-400 py-1 px-2 rounded-lg text-zinc-600 transition hover:text-zinc-100 dark:text-zinc-400 dark:hover:text-white"
         >
-          Start studying
+          Upload PDF
         </a>
 
         <a
-          href="#materials"
-          className="text-sm font-semibold text-zinc-600 transition hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+          href="/#study-mode"
+          className="text-xs ibm-mono font-semibold text-zinc-600 transition hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
         >
-          PDFs
+          study mode
+        </a>
+        
+        <a
+          href="/#todo-list"
+          className="text-xs ibm-mono font-semibold text-zinc-600 transition hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+        >
+          to-do
         </a>
       </div>
 
@@ -145,7 +156,7 @@ function Navbar() {
         >
           <User className="h-4 w-4 shrink-0 text-zinc-500 dark:text-zinc-400" />
 
-          <span className="hidden max-w-32 truncate text-sm font-medium text-zinc-700 dark:text-zinc-200 sm:block">
+          <span className="max-w-32 truncate text-xs md:text-sm lg:text-sm font-medium text-zinc-700 dark:text-zinc-200 sm:block">
             {userName}
           </span>
 
@@ -158,17 +169,17 @@ function Navbar() {
 
         {/* Dropdown */}
         {showDropdown && (
-          <div className="absolute right-0 top-[calc(100%+8px)] w-44 overflow-hidden rounded-2xl border border-zinc-200 bg-white/95 p-1.5 shadow-xl shadow-zinc-900/10 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95 dark:shadow-black/30">
+          <div className="absolute right-0 top-[calc(100%+8px)] w-full overflow-hidden rounded-2xl border border-zinc-200 bg-white/95 p-1.5 shadow-xl shadow-zinc-900/10 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95 dark:shadow-black/30">
             {/* Dark Mode */}
             <button
               type="button"
               onClick={handleDarkMode}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-white"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs md:text-sm lg:text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-white"
             >
               {darkMode ? (
-                <Sun className="h-4 w-4" />
+                <Sun className="h-3 w-3 md:h-4 md:w-4" />
               ) : (
-                <Moon className="h-4 w-4" />
+                <Moon className="h-3 w-3 md:h-4 md:w-4" />
               )}
 
               <span>{darkMode ? "Light mode" : "Dark mode"}</span>
@@ -181,7 +192,7 @@ function Navbar() {
             <button
               type="button"
               onClick={handleLogout}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-zinc-600 transition hover:bg-red-50 hover:text-red-500 dark:text-zinc-300 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs md:text-sm lg:text-sm font-medium text-zinc-600 transition hover:bg-zinc-50 hover:text-red-500 dark:text-zinc-300 dark:hover:bg-zinc-500/10 dark:hover:text-red-500"
             >
               Logout
             </button>
@@ -193,4 +204,3 @@ function Navbar() {
 }
 
 export default Navbar;
-

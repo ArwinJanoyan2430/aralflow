@@ -33,6 +33,9 @@ function Login() {
       return;
     }
 
+    // Tell UpdateNotice to show after login
+    sessionStorage.setItem("show-update-notice", "true");
+
     navigate("/");
   };
 
@@ -46,12 +49,12 @@ function Login() {
       buttonText={isSigningIn ? "Signing in..." : "Sign in"}
       error={error}
       footer={
-        <p className="inter-font mt-4 text-center text-xs text-zinc-500">
+        <p className="inter-font mt-4 text-center text-xs text-zinc-500 dark:text-zinc-400">
           Dont have an account?{" "}
           <button
             type="button"
             onClick={handleSignup}
-            className="ibm-mono cursor-pointer text-xs text-zinc-800 hover:text-zinc-500"
+            className="ibm-mono cursor-pointer text-xs text-zinc-800 hover:text-zinc-500 dark:text-zinc-200 dark:hover:text-zinc-400"
           >
             Sign up here
           </button>
@@ -59,7 +62,7 @@ function Login() {
       }
     >
       <div className="mb-4">
-        <label className="ibm-mono mb-2 block text-xs font-medium text-zinc-700">
+        <label className="ibm-mono mb-2 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
           Email
         </label>
 
@@ -68,12 +71,12 @@ function Login() {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="student@example.com"
-          className="inter-font w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-500"
+          className="inter-font w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:placeholder:text-zinc-500"
         />
       </div>
 
       <div className="mb-4">
-        <label className="ibm-mono mb-2 block text-xs font-medium text-zinc-700">
+        <label className="ibm-mono mb-2 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
           Password
         </label>
 
@@ -82,7 +85,7 @@ function Login() {
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           placeholder="Enter password"
-          className="inter-font w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-500"
+          className="inter-font w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:placeholder:text-zinc-500"
         />
       </div>
     </Form>
@@ -90,4 +93,3 @@ function Login() {
 }
 
 export default Login;
-
