@@ -476,7 +476,9 @@ Deno.serve(async (req) => {
         error: error instanceof Error ? error.message : String(error),
       }),
       {
-        status: 500,
+        // Keep application errors in the JSON body. A non-2xx response makes
+        // supabase-js replace this useful message with a generic FunctionsHttpError.
+        status: 200,
         headers: jsonHeaders,
       },
     );
