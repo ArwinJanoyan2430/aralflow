@@ -381,7 +381,9 @@ function Home() {
         await supabase.storage.from("study-materials").remove([uploadedPath]);
       }
 
-      setUploadError(error?.message || "Could not add this PDF to the library.");
+      setUploadError(
+        error?.message || "Could not add this PDF to the library.",
+      );
     } finally {
       setIsUploading(false);
       setUploadAction(null);
@@ -513,10 +515,7 @@ function Home() {
         previous.filter((material) => !selectedMaterials.includes(material.id)),
       );
 
-      if (
-        notesMaterial &&
-        selectedMaterials.includes(notesMaterial.id)
-      ) {
+      if (notesMaterial && selectedMaterials.includes(notesMaterial.id)) {
         setNotesMaterial(null);
       }
 
@@ -1039,7 +1038,9 @@ function Home() {
                                   <>
                                     <button
                                       type="button"
-                                      onClick={() => handleCreateNotes(material)}
+                                      onClick={() =>
+                                        handleCreateNotes(material)
+                                      }
                                       className="inter-font rounded-full border border-zinc-200 bg-white px-4 py-2.5 text-xs font-semibold text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
                                     >
                                       Create notes
@@ -1146,6 +1147,9 @@ function Home() {
               </button>
             </div>
 
+            <p className="ibm-mono text-[10px] uppercase tracking-wider mt-3 text-zinc-400 dark:text-zinc-500">
+              go to notes
+            </p>
             <button
               type="button"
               disabled={isEditing}
