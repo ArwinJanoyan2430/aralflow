@@ -13,6 +13,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#09090b" />
 
+    <script>
+      // A tab left open during a deployment can still reference hashed chunks
+      // from the previous build. Vite emits this event when such a lazy import
+      // fails, so refresh once to load the current index and asset manifest.
+      window.addEventListener("vite:preloadError", (event) => {
+        event.preventDefault();
+
+        const failedAsset =
+          event.payload?.request || event.payload?.message || "unknown-asset";
+        const recoveryKey = "aralflow:preload-recovery";
+        const previousRecovery = sessionStorage.getItem(recoveryKey);
+
+        if (previousRecovery !== failedAsset) {
+          sessionStorage.setItem(recoveryKey, failedAsset);
+          window.location.reload();
+        }
+      });
+    </script>
+
     <title>AralFlow — AI-Powered Exam Preparation</title>
   </head>
   <body>
