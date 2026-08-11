@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { User, ChevronDown, Moon, Sun } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import toast from "react-hot-toast";
 
 function Navbar() {
   const [showNavbar, setShowNavbar] = useState(true);
@@ -53,6 +54,7 @@ function Navbar() {
     } catch (error) {
       console.error("Logout error:", error);
     }
+    toast.success("Logged out successfully!");
   };
 
   // Dark mode
@@ -169,7 +171,7 @@ function Navbar() {
 
         {/* Dropdown */}
         {showDropdown && (
-          <div className="absolute right-0 top-[calc(100%+8px)] w-full overflow-hidden rounded-2xl border border-zinc-200 bg-white/95 p-1.5 shadow-xl shadow-zinc-900/10 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95 dark:shadow-black/30">
+          <div className="absolute right-0 top-[calc(100%+8px)] w-44 overflow-hidden rounded-2xl border border-zinc-200 bg-white/95 p-1.5 shadow-xl shadow-zinc-900/10 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95 dark:shadow-black/30">
             {/* Dark Mode */}
             <button
               type="button"

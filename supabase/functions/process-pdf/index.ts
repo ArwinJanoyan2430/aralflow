@@ -2,8 +2,6 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-import { extractText, getDocumentProxy } from "npm:unpdf@1.6.2";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -16,16 +14,20 @@ const jsonHeaders = {
   "Content-Type": "application/json",
 };
 
-const QUESTIONS_PER_BATCH = 25;
+const QUESTIONS_PER_BATCH = 10;
 const MAX_PAGES_PER_BATCH = 25;
-const MAX_CHARACTERS_PER_PAGE = 4_000;
-const MAX_GENERATION_ATTEMPTS = 3;
-const MAX_CONCURRENT_BATCHES = 2;
+const MAX_GENERATION_ATTEMPTS = 1;
 
 const normalizeComparableText = (value: unknown) =>
   typeof value === "string"
     ? value.replace(/\s+/g, " ").trim().toLocaleLowerCase()
     : "";
+
+const normalizeChoiceText = (value: unknown) =>
+  normalizeComparableText(value)
+    .replace(/^\W*(?:(?:choice|option|answer)\s*)?[a-d1-4]\s*[).:\-]\s*/i, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
 
 async function generateQuestionBatch(
   geminiUrl: string,
@@ -40,7 +42,7 @@ async function generateQuestionBatch(
     body: JSON.stringify({
       systemInstruction: {
         parts: [{
-          text: `You are AralFlow, an AI exam generator. Create a practice exam ONLY from the supplied study material. Do not invent facts, and ensure every question and answer is supported by the labelled pages in this section. Generate EXACTLY ${questionCount} different multiple-choice questions, using factual, conceptual, comprehension, and application questions where the source supports them. Each question must have a question, exactly 4 choices, an answer that exactly matches a choice, and a short explanation. Return ONLY valid JSON in this format: {"questions":[{"question":"Question text","choices":["Choice A","Choice B","Choice C","Choice D"],"answer":"Choice A","explanation":"Short explanation"}]}. This is batch ${batchNumber} of ${totalBatches}; do not repeat questions from other sections.`,
+          text: `You are AralFlow, an AI exam generator. Create a practice exam ONLY from the supplied study material. Do not invent facts, and ensure every question and answer is supported by the labelled pages in this section. Generate EXACTLY ${questionCount} different multiple-choice questions, using factual, conceptual, comprehension, and application questions where the source supports them. Each question must have a question, exactly 4 choices, an answer label (A, B, C, or D), and a short explanation. This is batch ${batchNumber} of ${totalBatches}; do not repeat questions from other sections.`,
         }],
       },
       contents: [{
@@ -50,7 +52,33 @@ async function generateQuestionBatch(
       generationConfig: {
         temperature: 0.3,
         responseMimeType: "application/json",
-        maxOutputTokens: 16_384,
+        responseJsonSchema: {
+          type: "object",
+          required: ["questions"],
+          properties: {
+            questions: {
+              type: "array",
+              minItems: questionCount,
+              maxItems: questionCount,
+              items: {
+                type: "object",
+                required: ["question", "choices", "answer", "explanation"],
+                properties: {
+                  question: { type: "string" },
+                  choices: {
+                    type: "array",
+                    minItems: 4,
+                    maxItems: 4,
+                    items: { type: "string" },
+                  },
+                  answer: { type: "string", enum: ["A", "B", "C", "D"] },
+                  explanation: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        maxOutputTokens: 12_288,
       },
     }),
   });
@@ -80,54 +108,15 @@ async function generateQuestionBatch(
   }
 
   try {
-    return JSON.parse(content);
+    const jsonText = content
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/, "")
+      .trim();
+    return JSON.parse(jsonText);
   } catch {
-    throw new Error("Gemini returned invalid JSON.");
-  }
-}
-
-async function generateBatchWithFallback(
-  geminiUrl: string,
-  studyText: string,
-  questionCount: number,
-  batchNumber: number,
-  totalBatches: number,
-): Promise<Record<string, unknown>[]> {
-  try {
-    return await generateCompleteBatch(
-      geminiUrl,
-      studyText,
-      questionCount,
-      batchNumber,
-      totalBatches,
+    throw new Error(
+      `Gemini returned invalid JSON${candidate?.finishReason ? ` (${candidate.finishReason})` : ""}.`,
     );
-  } catch (error) {
-    // Large structured responses can occasionally finish without a text part.
-    // Smaller requests are more reliable and still preserve the requested total.
-    if (questionCount <= 5) throw error;
-
-    const firstCount = Math.ceil(questionCount / 2);
-    const secondCount = questionCount - firstCount;
-    console.warn(
-      `Batch ${batchNumber} is being retried as ${firstCount} + ${secondCount} questions.`,
-      error,
-    );
-
-    const first = await generateBatchWithFallback(
-      geminiUrl,
-      studyText,
-      firstCount,
-      batchNumber,
-      totalBatches,
-    );
-    const second = await generateBatchWithFallback(
-      geminiUrl,
-      studyText,
-      secondCount,
-      batchNumber,
-      totalBatches,
-    );
-    return [...first, ...second];
   }
 }
 
@@ -205,6 +194,12 @@ Deno.serve(async (req) => {
     const questionCount = Number(body?.questionCount ?? 10);
     const mode = body?.mode === "update" ? "update" : "create";
     const materialId = body?.materialId;
+    const totalPages = Number(body?.totalPages);
+    const pageSections = Array.isArray(body?.pageSections)
+      ? body.pageSections.filter((section: unknown) =>
+        typeof section === "string" && section.trim().length > 0
+      )
+      : [];
 
     console.log("Request:", {
       filePath,
@@ -213,6 +208,14 @@ Deno.serve(async (req) => {
 
     if (!filePath) {
       throw new Error("filePath is required.");
+    }
+
+    if (
+      !Number.isInteger(totalPages) || totalPages < 1 ||
+      pageSections.length === 0 || pageSections.length > totalPages ||
+      pageSections.some((section: string) => section.length > 4_100)
+    ) {
+      throw new Error("Valid extracted PDF page text is required.");
     }
 
     // -----------------------------------------
@@ -276,73 +279,7 @@ Deno.serve(async (req) => {
       throw new Error("You do not have permission to access this file.");
     }
 
-    // -----------------------------------------
-    // 6. Download PDF
-    // -----------------------------------------
-
-    console.log("Downloading PDF:", filePath);
-
-    const { data: pdfFile, error: downloadError } = await supabase.storage
-      .from("study-materials")
-      .download(filePath);
-
-    if (downloadError) {
-      console.error("Download error:", downloadError);
-
-      throw new Error(`Failed to download PDF: ${downloadError.message}`);
-    }
-
-    if (!pdfFile) {
-      throw new Error("PDF was not found.");
-    }
-
-    console.log(`PDF downloaded: ${pdfFile.size} bytes`);
-
-    // -----------------------------------------
-    // 7. Convert PDF
-    // -----------------------------------------
-
-    const arrayBuffer = await pdfFile.arrayBuffer();
-
-    const pdfData = new Uint8Array(arrayBuffer);
-
-    // -----------------------------------------
-    // 8. Extract text
-    // -----------------------------------------
-
-    console.log("Extracting PDF text...");
-
-    const pdf = await getDocumentProxy(pdfData);
-
-    const { totalPages, text: pageTexts } = await extractText(pdf);
-
-    console.log("Pages:", totalPages);
-
-    const readablePages = pageTexts
-      .map((pageText, index) => ({
-        pageNumber: index + 1,
-        text: pageText.replace(/\s+/g, " ").trim(),
-      }))
-      .filter((page) => page.text.length > 0);
-
-    console.log("Readable pages:", readablePages.length);
-
-    if (readablePages.length === 0) {
-      throw new Error(
-        "No readable text was found in this PDF. The PDF may be scanned or contain only images.",
-      );
-    }
-
-    // -----------------------------------------
-    // 9. Prepare study material
-    // -----------------------------------------
-
-    // Keep page boundaries so every part of a long document can be sampled.
-    // A bounded excerpt per page lets the model cover 300+ pages without
-    // sending one oversized prompt that would drop material near the end.
-    const pageSections = readablePages.map((page) =>
-      `[Page ${page.pageNumber}]\n${page.text.slice(0, MAX_CHARACTERS_PER_PAGE)}`,
-    );
+    console.log("Received readable pages:", pageSections.length);
 
     // -----------------------------------------
     // 10. Gemini API key
@@ -386,7 +323,7 @@ Deno.serve(async (req) => {
       console.log(`Generating batch ${batchIndex + 1} of ${totalBatches}`);
 
       return () =>
-        generateBatchWithFallback(
+        generateCompleteBatch(
           geminiUrl,
           studySection,
           batchQuestionCount,
@@ -395,22 +332,9 @@ Deno.serve(async (req) => {
         );
     });
 
-    // Keep a little parallelism without sending all six possible requests at
-    // once, which can cause transient empty responses or rate-limit pressure.
-    const batchResults: Record<string, unknown>[][] = new Array(totalBatches);
-    let nextBatch = 0;
-    const workers = Array.from(
-      { length: Math.min(MAX_CONCURRENT_BATCHES, totalBatches) },
-      async () => {
-        while (nextBatch < batchJobs.length) {
-          const batchIndex = nextBatch;
-          nextBatch += 1;
-          batchResults[batchIndex] = await batchJobs[batchIndex]();
-        }
-      },
-    );
-    await Promise.all(workers);
-    const questions = batchResults.flat();
+    // Use small, single-pass requests and overlap them so generation remains
+    // bounded by one Gemini round trip and fits the Edge Function time limit.
+    const questions = (await Promise.all(batchJobs.map((job) => job()))).flat();
 
     const exam = { title: "Practice Exam", questions };
 
@@ -441,7 +365,8 @@ Deno.serve(async (req) => {
         !question.question ||
         !Array.isArray(question.choices) ||
         question.choices.length !== 4 ||
-        !question.answer ||
+        question.answer === undefined ||
+        question.answer === null ||
         !question.explanation
       ) {
         throw new Error("One or more generated questions are invalid.");
@@ -455,11 +380,29 @@ Deno.serve(async (req) => {
           normalizeComparableText(question.answer),
       );
       const answerLabel = normalizeComparableText(question.answer).match(
-        /^(?:choice|option)?\s*([a-d])(?:[).:]|\s|$)/,
+        /^\W*(?:(?:choice|option|answer)\s*)?([a-d])(?:[).:\-]|\s|$)/,
       )?.[1];
+      const numericAnswer = typeof question.answer === "number"
+        ? question.answer
+        : normalizeComparableText(question.answer).match(/^\W*([1-4])\W*$/)
+          ?.[1];
+      const normalizedAnswer = normalizeChoiceText(question.answer);
+      const textMatch = normalizedAnswer.length > 0
+        ? question.choices.find((choice: unknown) => {
+          const normalizedChoice = normalizeChoiceText(choice);
+          return normalizedChoice === normalizedAnswer ||
+            (normalizedAnswer.length >= 8 &&
+              (normalizedChoice.includes(normalizedAnswer) ||
+                normalizedAnswer.includes(normalizedChoice)));
+        })
+        : null;
       const matchingChoice =
         directMatch ||
-        (answerLabel ? question.choices[answerLabel.charCodeAt(0) - 97] : null);
+        (answerLabel ? question.choices[answerLabel.charCodeAt(0) - 97] : null) ||
+        (numericAnswer !== undefined
+          ? question.choices[Math.max(0, Number(numericAnswer) - 1)]
+          : null) ||
+        textMatch;
 
       if (!matchingChoice) {
         throw new Error("A generated answer does not match its choices.");

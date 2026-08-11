@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -57,6 +58,10 @@ function App() {
 
   return (
     <BrowserRouter>
+      <Toaster
+        position="-top-center"
+        toastOptions={{ duration: 3000 }}
+      />
       <Routes>
         {/* Login */}
         <Route

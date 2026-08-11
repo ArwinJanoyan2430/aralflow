@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { Pencil, File } from "lucide-react";
 import UpdateNotice from "../components/UpdateNotice";
+import { extractText, getDocumentProxy } from "unpdf";
+import toast from "react-hot-toast";
 
 //image
 import aralflow from "../assets/aralflow.png";
@@ -15,6 +17,31 @@ import ToDoList from "../pages/ToDoList";
 
 const displayFileName = (fileName) =>
   fileName?.replace(/^\d+-/, "") || "Study material";
+
+const MAX_CHARACTERS_PER_PAGE = 4_000;
+const PASSING_PERCENTAGE = 75;
+
+const extractPdfPageSections = async (file) => {
+  const pdfData = new Uint8Array(await file.arrayBuffer());
+  const pdf = await getDocumentProxy(pdfData);
+  const { totalPages, text: pageTexts } = await extractText(pdf);
+  const pageSections = pageTexts
+    .map((pageText, index) => {
+      const text = pageText.replace(/\s+/g, " ").trim();
+      return text
+        ? `[Page ${index + 1}]\n${text.slice(0, MAX_CHARACTERS_PER_PAGE)}`
+        : "";
+    })
+    .filter(Boolean);
+
+  if (pageSections.length === 0) {
+    throw new Error(
+      "No readable text was found in this PDF. It may be scanned or contain only images.",
+    );
+  }
+
+  return { pageSections, totalPages };
+};
 
 function Home() {
   const fileInputRef = useRef(null);
@@ -218,6 +245,8 @@ function Home() {
       setGenerationProgress(90);
       console.log("Uploaded:", data);
 
+      const { pageSections, totalPages } = await extractPdfPageSections(file);
+
       // -----------------------------------------
       // Process PDF
       // -----------------------------------------
@@ -226,6 +255,8 @@ function Home() {
           body: {
             filePath: data.path,
             questionCount,
+            pageSections,
+            totalPages,
           },
         });
 
@@ -251,6 +282,7 @@ function Home() {
 
       setGenerationProgress(100);
       setSelectedFile(file);
+      
 
       // -----------------------------------------
       // Add new material to library
@@ -421,6 +453,16 @@ function Home() {
     setUploadError("");
 
     try {
+      const { data: pdfFile, error: downloadError } = await supabase.storage
+        .from("study-materials")
+        .download(editingMaterial.file_path);
+
+      if (downloadError || !pdfFile) {
+        throw new Error(downloadError?.message || "Failed to download PDF.");
+      }
+
+      const { pageSections, totalPages } = await extractPdfPageSections(pdfFile);
+
       const { data: result, error: functionError } =
         await supabase.functions.invoke("process-pdf", {
           body: {
@@ -428,6 +470,8 @@ function Home() {
             questionCount,
             mode: "update",
             materialId: editingMaterial.id,
+            pageSections,
+            totalPages,
           },
         });
 
@@ -741,13 +785,18 @@ function Home() {
                             material.id,
                           );
                           const completion = material.exam?.completion;
+                          const passed = completion
+                            ? completion.total > 0 &&
+                              (completion.score / completion.total) * 100 >=
+                                PASSING_PERCENTAGE
+                            : false;
 
                           return (
                             <div
                               key={material.id}
                               className={`group flex items-center gap-3 rounded-3xl border bg-white p-4 shadow-sm transition dark:bg-zinc-900 ${
                                 isSelected
-                                  ? "border-zinc-900 ring-1 ring-zinc-900 dark:border-white dark:ring-white"
+                                  ? "border-zinc-900 ring-1 ring-zinc-50 dark:border-white dark:ring-white"
                                   : "border-zinc-200 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:hover:border-zinc-700"
                               }`}
                             >
@@ -797,9 +846,15 @@ function Home() {
                                         ·
                                       </span>
 
-                                      <span className="ibm-mono rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
-                                        Completed · {completion.score}/
-                                        {completion.total}
+                                      <span
+                                        className={`ibm-mono rounded-full px-2 py-1 text-[9px] font-semibold uppercase tracking-wider ${
+                                          passed
+                                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                                            : "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300"
+                                        }`}
+                                      >
+                                        {completion.score}/{completion.total}{" "}
+                                        {passed ? "Passed" : "Failed"}
                                       </span>
                                     </>
                                   )}

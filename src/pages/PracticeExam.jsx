@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
+const PASSING_PERCENTAGE = 75;
+
 function PracticeExam() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -23,6 +25,12 @@ function PracticeExam() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
+  // Leaving only discards local answers. Results are persisted exclusively by
+  // handleSubmit after every question has been answered.
+  const handleBackHome = () => {
+    navigate("/");
+  };
+
   if (!exam) {
     return (
       <main className="min-h-screen bg-zinc-50 px-6 py-20 dark:bg-zinc-950">
@@ -42,7 +50,7 @@ function PracticeExam() {
 
             <button
               type="button"
-              onClick={() => navigate("/")}
+              onClick={handleBackHome}
               className="inter-font mt-7 rounded-full bg-zinc-900 px-6 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-zinc-800"
             >
               Back to Home
@@ -55,7 +63,9 @@ function PracticeExam() {
 
   const questions = exam.questions || [];
 
-  const answeredCount = Object.keys(answers).length;
+  const answeredCount = Object.values(answers).filter(
+    (answer) => answer !== null && answer !== undefined && answer !== "",
+  ).length;
   const progress =
     questions.length > 0
       ? Math.round((answeredCount / questions.length) * 100)
@@ -72,6 +82,11 @@ function PracticeExam() {
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
+
+    if (answeredCount !== questions.length) {
+      setSubmitError("Answer every question before submitting the exam.");
+      return;
+    }
 
     setIsSubmitting(true);
     setSubmitError("");
@@ -135,6 +150,10 @@ function PracticeExam() {
   const score = isReview && exam.completion
     ? exam.completion.score
     : calculateScore();
+  const percentage = questions.length
+    ? Math.round((score / questions.length) * 100)
+    : 0;
+  const passed = percentage >= PASSING_PERCENTAGE;
 
   return (
       <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
@@ -144,7 +163,7 @@ function PracticeExam() {
           {/* Back */}
           <button
             type="button"
-            onClick={() => navigate("/")}
+            onClick={handleBackHome}
             className="ibm-mono mb-6 text-sm font-medium text-zinc-500 transition hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
           >
             ← Back to home
@@ -222,14 +241,9 @@ function PracticeExam() {
             <p className="inter-font mt-3 text-sm text-zinc-600 dark:text-zinc-300">
               You scored{" "}
               <span className="font-semibold">
-                {questions.length
-                  ? Math.round(
-                      (score / questions.length) * 100,
-                    )
-                  : 0}
-                %
+                {percentage}%
               </span>
-              .
+              . You {passed ? "passed" : "failed"}.
             </p>
           </div>
         )}
@@ -417,8 +431,8 @@ function PracticeExam() {
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="inter-font rounded-full bg-zinc-900 px-7 py-3 text-sm font-semibold text-white shadow-lg shadow-zinc-900/10 transition hover:-translate-y-0.5 hover:bg-zinc-800 active:translate-y-0 disabled:cursor-wait disabled:opacity-60"
+                disabled={isSubmitting || answeredCount !== questions.length}
+                className="inter-font rounded-full bg-zinc-900 px-7 py-3 text-sm font-semibold text-white shadow-lg shadow-zinc-900/10 transition hover:-translate-y-0.5 hover:bg-zinc-800 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? "Saving result..." : "Submit Exam →"}
               </button>
@@ -436,10 +450,10 @@ function PracticeExam() {
         {submitted && (
           <button
             type="button"
-            onClick={() => navigate("/")}
+            onClick={handleBackHome}
             className="inter-font mt-10 w-full rounded-full bg-zinc-900 px-7 py-4 text-sm font-semibold text-white transition hover:bg-zinc-800"
           >
-            Take Another Exam
+            Return to Home
           </button>
         )}
       </section>

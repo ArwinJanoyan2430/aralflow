@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import Form from "../components/Form";
+import toast from "react-hot-toast";
 
 function Login() {
   const navigate = useNavigate();

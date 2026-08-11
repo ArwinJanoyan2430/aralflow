@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import Form from "../components/Form";
+import toast from "react-hot-toast";
 
 function Signup() {
   const navigate = useNavigate();
@@ -46,16 +47,15 @@ function Signup() {
       // Create Supabase Auth account
       // -----------------------------
 
-      const { data, error: signupError } =
-        await supabase.auth.signUp({
-          email: cleanEmail,
-          password,
-          options: {
-            data: {
-              name: cleanName,
-            },
+      const { data, error: signupError } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password,
+        options: {
+          data: {
+            name: cleanName,
           },
-        });
+        },
+      });
 
       console.log("Signup data:", data);
       console.log("Signup error:", signupError);
@@ -92,6 +92,7 @@ function Signup() {
         // If Supabase returned a session,
         // the user is already logged in.
         if (data.session) {
+          toast.success("Account created successfully!");
           navigate("/", { replace: true });
           return;
         }

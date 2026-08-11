@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast"
+
 const UPDATE_NOTICE = {
   version: "v1.1",
   label: "What's new",
@@ -16,7 +18,7 @@ const UPDATE_NOTICE = {
 
 function UpdateNotice() {
   const [showUpdateNotice, setShowUpdateNotice] = useState(false);
-
+  
   useEffect(() => {
     if (sessionStorage.getItem("show-update-notice") === "true") {
       // Consume the login event immediately so a browser refresh cannot show
@@ -28,6 +30,7 @@ function UpdateNotice() {
 
   const handleDismissUpdate = () => {
     setShowUpdateNotice(false);
+    toast.success("Welcome back!");
   };
 
   if (!showUpdateNotice) {
