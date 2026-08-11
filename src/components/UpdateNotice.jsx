@@ -11,6 +11,7 @@ const UPDATE_NOTICE = {
     "Drag & Drop PDF",
     "Exam Progress",
     "Pomodoro",
+    "To-do-list",
     "Profile Menu",
     "Dark Mode",
   ],
