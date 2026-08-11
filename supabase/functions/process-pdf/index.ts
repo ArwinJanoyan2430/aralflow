@@ -20,6 +20,7 @@ const QUESTIONS_PER_BATCH = 25;
 const MAX_PAGES_PER_BATCH = 25;
 const MAX_CHARACTERS_PER_PAGE = 4_000;
 const MAX_GENERATION_ATTEMPTS = 3;
+const MAX_CONCURRENT_BATCHES = 2;
 
 const normalizeComparableText = (value: unknown) =>
   typeof value === "string"
@@ -59,16 +60,74 @@ async function generateQuestionBatch(
   }
 
   const data = await response.json();
-  const content = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  const candidate = data?.candidates?.[0];
+  const content = candidate?.content?.parts
+    ?.map((part: { text?: unknown }) =>
+      typeof part?.text === "string" ? part.text : ""
+    )
+    .join("")
+    .trim();
 
   if (!content) {
-    throw new Error("Gemini returned an empty response.");
+    const reason = candidate?.finishReason ||
+      data?.promptFeedback?.blockReason ||
+      data?.error?.message;
+    throw new Error(
+      reason
+        ? `Gemini returned no text (${reason}).`
+        : "Gemini returned an empty response.",
+    );
   }
 
   try {
     return JSON.parse(content);
   } catch {
     throw new Error("Gemini returned invalid JSON.");
+  }
+}
+
+async function generateBatchWithFallback(
+  geminiUrl: string,
+  studyText: string,
+  questionCount: number,
+  batchNumber: number,
+  totalBatches: number,
+): Promise<Record<string, unknown>[]> {
+  try {
+    return await generateCompleteBatch(
+      geminiUrl,
+      studyText,
+      questionCount,
+      batchNumber,
+      totalBatches,
+    );
+  } catch (error) {
+    // Large structured responses can occasionally finish without a text part.
+    // Smaller requests are more reliable and still preserve the requested total.
+    if (questionCount <= 5) throw error;
+
+    const firstCount = Math.ceil(questionCount / 2);
+    const secondCount = questionCount - firstCount;
+    console.warn(
+      `Batch ${batchNumber} is being retried as ${firstCount} + ${secondCount} questions.`,
+      error,
+    );
+
+    const first = await generateBatchWithFallback(
+      geminiUrl,
+      studyText,
+      firstCount,
+      batchNumber,
+      totalBatches,
+    );
+    const second = await generateBatchWithFallback(
+      geminiUrl,
+      studyText,
+      secondCount,
+      batchNumber,
+      totalBatches,
+    );
+    return [...first, ...second];
   }
 }
 
@@ -302,7 +361,7 @@ Deno.serve(async (req) => {
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${geminiKey}`;
 
     const totalBatches = Math.ceil(questionCount / QUESTIONS_PER_BATCH);
-    const batchPromises = Array.from({ length: totalBatches }, (_, batchIndex) => {
+    const batchJobs = Array.from({ length: totalBatches }, (_, batchIndex) => {
       const generatedBefore = batchIndex * QUESTIONS_PER_BATCH;
       const batchQuestionCount = Math.min(
         QUESTIONS_PER_BATCH,
@@ -326,18 +385,32 @@ Deno.serve(async (req) => {
 
       console.log(`Generating batch ${batchIndex + 1} of ${totalBatches}`);
 
-      return generateCompleteBatch(
-        geminiUrl,
-        studySection,
-        batchQuestionCount,
-        batchIndex + 1,
-        totalBatches,
-      );
+      return () =>
+        generateBatchWithFallback(
+          geminiUrl,
+          studySection,
+          batchQuestionCount,
+          batchIndex + 1,
+          totalBatches,
+        );
     });
 
-    // Six 25-question requests are enough for the 150-item option. Running
-    // them together avoids the Edge Function timing out on sequential calls.
-    const questions = (await Promise.all(batchPromises)).flat();
+    // Keep a little parallelism without sending all six possible requests at
+    // once, which can cause transient empty responses or rate-limit pressure.
+    const batchResults: Record<string, unknown>[][] = new Array(totalBatches);
+    let nextBatch = 0;
+    const workers = Array.from(
+      { length: Math.min(MAX_CONCURRENT_BATCHES, totalBatches) },
+      async () => {
+        while (nextBatch < batchJobs.length) {
+          const batchIndex = nextBatch;
+          nextBatch += 1;
+          batchResults[batchIndex] = await batchJobs[batchIndex]();
+        }
+      },
+    );
+    await Promise.all(workers);
+    const questions = batchResults.flat();
 
     const exam = { title: "Practice Exam", questions };
 
