@@ -1,8 +1,10 @@
-import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import PdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?worker";
 
 const MAX_CHARACTERS_PER_PAGE = 4_000;
 const MIN_EMBEDDED_TEXT_CHARACTERS = 30;
 const OCR_RENDER_SCALE = 2;
+
+let pdfWorker;
 
 const normalizeText = (text) => text.replace(/\s+/g, " ").trim();
 
@@ -10,7 +12,11 @@ export const extractPdfPageSections = async (file, onProgress) => {
   // PDF.js is large, so load it only when the user processes a PDF instead of
   // including it in the app's initial JavaScript bundle.
   const pdfjs = await import("pdfjs-dist");
-  pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+  // Let Vite create and serve the worker. Passing a URL to PDF.js can make the
+  // dev server resolve it as a normal dynamic import (`?import`), which causes
+  // PDF.js to fall back to its fake worker when that request fails.
+  pdfWorker ??= new PdfWorker();
+  pdfjs.GlobalWorkerOptions.workerPort = pdfWorker;
 
   const pdfData = new Uint8Array(await file.arrayBuffer());
   const loadingTask = pdfjs.getDocument({ data: pdfData });
