@@ -604,10 +604,12 @@ function NotesGenerator({ initialMaterial = null }) {
                   View library
                 </a>
                 <button
-                  onClick={()=> setUploade}
-                  className="inter-font shrink-0 text-xs font-semibold text-zinc-600 underline underline-offset-4 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+                  type="button"
+                  onClick={() => setUploadedMaterial(null)}
+                  aria-label="Close uploaded PDF"
+                  className="shrink-0 rounded-full p-2 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-white"
                 >
-                  View library
+                  <X size={16} />
                 </button>
               </div>
 
