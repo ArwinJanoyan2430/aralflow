@@ -16,7 +16,38 @@ const jsonHeaders = {
 
 const QUESTIONS_PER_BATCH = 10;
 const MAX_PAGES_PER_BATCH = 25;
-const MAX_GENERATION_ATTEMPTS = 1;
+const MAX_GENERATION_ATTEMPTS = 4;
+const MAX_CONCURRENT_BATCHES = 3;
+const RETRYABLE_GEMINI_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
+
+class GeminiRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly retryAfterMs?: number,
+  ) {
+    super(message);
+    this.name = "GeminiRequestError";
+  }
+}
+
+const sleep = (milliseconds: number) =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+function getRetryDelay(error: unknown, attempt: number) {
+  if (
+    error instanceof GeminiRequestError &&
+    !RETRYABLE_GEMINI_STATUSES.has(error.status)
+  ) {
+    return null;
+  }
+
+  const exponentialDelay = Math.min(8_000, 1_000 * 2 ** (attempt - 1));
+  const jitter = Math.floor(Math.random() * 750);
+  return error instanceof GeminiRequestError && error.retryAfterMs !== undefined
+    ? Math.max(error.retryAfterMs, exponentialDelay) + jitter
+    : exponentialDelay + jitter;
+}
 
 const normalizeComparableText = (value: unknown) =>
   typeof value === "string"
@@ -84,7 +115,13 @@ async function generateQuestionBatch(
   });
 
   if (!response.ok) {
-    throw new Error(`Gemini request failed: ${await response.text()}`);
+    const responseBody = await response.text();
+    const retryAfterSeconds = Number(response.headers.get("retry-after"));
+    throw new GeminiRequestError(
+      `Gemini request failed (${response.status}): ${responseBody}`,
+      response.status,
+      Number.isFinite(retryAfterSeconds) ? retryAfterSeconds * 1_000 : undefined,
+    );
   }
 
   const data = await response.json();
@@ -159,7 +196,13 @@ async function generateCompleteBatch(
     );
 
     if (attempt < MAX_GENERATION_ATTEMPTS) {
-      await new Promise((resolve) => setTimeout(resolve, attempt * 750));
+      const retryDelay = getRetryDelay(lastError, attempt);
+      if (retryDelay === null) break;
+
+      console.warn(
+        `Retrying batch ${batchNumber} in ${retryDelay}ms.`,
+      );
+      await sleep(retryDelay);
     }
   }
 
@@ -332,9 +375,23 @@ Deno.serve(async (req) => {
         );
     });
 
-    // Use small, single-pass requests and overlap them so generation remains
-    // bounded by one Gemini round trip and fits the Edge Function time limit.
-    const questions = (await Promise.all(batchJobs.map((job) => job()))).flat();
+    // Keep enough overlap for fast generation without sending every batch to
+    // Gemini at once, which makes transient 429/503 responses more likely.
+    const batchResults: Awaited<ReturnType<typeof generateCompleteBatch>>[] =
+      new Array(batchJobs.length);
+    let nextBatchIndex = 0;
+    const workers = Array.from(
+      { length: Math.min(MAX_CONCURRENT_BATCHES, batchJobs.length) },
+      async () => {
+        while (nextBatchIndex < batchJobs.length) {
+          const batchIndex = nextBatchIndex;
+          nextBatchIndex += 1;
+          batchResults[batchIndex] = await batchJobs[batchIndex]();
+        }
+      },
+    );
+    await Promise.all(workers);
+    const questions = batchResults.flat();
 
     const exam = { title: "Practice Exam", questions };
 

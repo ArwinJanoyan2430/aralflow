@@ -204,14 +204,6 @@ function NotesGenerator({ initialMaterial = null }) {
     if (!isUploading) selectFile(event.dataTransfer.files?.[0]);
   };
 
-  const handleClearUploadedMaterial = () => {
-    setUploadedMaterial(null);
-    setGeneratedNotes(null);
-    setActiveNoteId(null);
-    setErrorMessage("");
-    extractionCacheRef.current = null;
-  };
-
   const handleUpload = async () => {
     if (!selectedFile || isUploading) return;
 
@@ -612,13 +604,10 @@ function NotesGenerator({ initialMaterial = null }) {
                   View library
                 </a>
                 <button
-                  type="button"
-                  onClick={handleClearUploadedMaterial}
-                  aria-label="Remove PDF from Notes Generator"
-                  title="Remove from Notes Generator"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-white"
+                  onClick={()=> setUploade}
+                  className="inter-font shrink-0 text-xs font-semibold text-zinc-600 underline underline-offset-4 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
                 >
-                  <X size={15} />
+                  View library
                 </button>
               </div>
 
