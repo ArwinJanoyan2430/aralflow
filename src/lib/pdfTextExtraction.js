@@ -11,6 +11,21 @@ let pdfWorker;
 
 const normalizeText = (text) => text.replace(/\s+/g, " ").trim();
 
+const readFileAsArrayBuffer = (file) => {
+  if (typeof file?.arrayBuffer === "function") {
+    return file.arrayBuffer();
+  }
+
+  // File.arrayBuffer() is unavailable in older iOS Safari/WebViews.
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () =>
+      reject(reader.error || new Error("Your browser could not read this PDF."));
+    reader.readAsArrayBuffer(file);
+  });
+};
+
 export const extractPdfPageSections = async (file, onProgress) => {
   // PDF.js is large, so load it only when the user processes a PDF instead of
   // including it in the app's initial JavaScript bundle.
@@ -21,7 +36,7 @@ export const extractPdfPageSections = async (file, onProgress) => {
   pdfWorker ??= new PdfWorker();
   pdfjs.GlobalWorkerOptions.workerPort = pdfWorker;
 
-  const pdfData = new Uint8Array(await file.arrayBuffer());
+  const pdfData = new Uint8Array(await readFileAsArrayBuffer(file));
   const loadingTask = pdfjs.getDocument({ data: pdfData });
   const pdf = await loadingTask.promise;
   const totalPages = pdf.numPages;
