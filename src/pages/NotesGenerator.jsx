@@ -59,6 +59,7 @@ function NotesGenerator({ initialMaterial = null }) {
   const [detailLevel, setDetailLevel] = useState("balanced");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStatus, setGenerationStatus] = useState("");
+  const [generationProgress, setGenerationProgress] = useState(0);
   const [generatedNotes, setGeneratedNotes] = useState(null);
   const [isLoadingLibraryPdf, setIsLoadingLibraryPdf] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
@@ -290,13 +291,14 @@ function NotesGenerator({ initialMaterial = null }) {
     return functionError?.message || "Could not generate notes.";
   };
 
-  const extractUploadedPdf = async (material, setStatus) => {
+  const extractUploadedPdf = async (material, setStatus, setProgress) => {
     if (!material?.sourceFile) {
       throw new Error("Please upload a PDF first.");
     }
 
     if (extractionCacheRef.current?.materialId === material.id) {
       setStatus("Using prepared PDF text...");
+      setProgress(45);
       return extractionCacheRef.current.extraction;
     }
 
@@ -306,6 +308,7 @@ function NotesGenerator({ initialMaterial = null }) {
         setStatus(
           `${usedOcr ? "Reading image text" : "Reading PDF"} · page ${currentPage} of ${pageCount}`,
         );
+        setProgress(10 + Math.round((currentPage / pageCount) * 35));
       },
     );
 
@@ -324,14 +327,23 @@ function NotesGenerator({ initialMaterial = null }) {
     setGeneratedNotes(null);
     setErrorMessage("");
     setGenerationStatus("Reading PDF...");
+    setGenerationProgress(8);
+    let writingProgressTimer;
 
     try {
       const { pageSections, totalPages } = await extractUploadedPdf(
         material,
         setGenerationStatus,
+        setGenerationProgress,
       );
 
       setGenerationStatus("Writing your notes...");
+      setGenerationProgress(50);
+      writingProgressTimer = window.setInterval(() => {
+        setGenerationProgress((progress) =>
+          Math.min(92, progress + Math.max(1, Math.round((92 - progress) / 8)))
+        );
+      }, 900);
 
       const { data, error } = await supabase.functions.invoke(
         "generate-notes",
@@ -352,6 +364,8 @@ function NotesGenerator({ initialMaterial = null }) {
         throw new Error(data?.error || "The AI returned no notes.");
       }
 
+      window.clearInterval(writingProgressTimer);
+      setGenerationProgress(100);
       setGeneratedNotes(data.notes);
       setActiveNoteId(data.savedNote?.id || null);
       if (data.savedNote) {
@@ -371,8 +385,10 @@ function NotesGenerator({ initialMaterial = null }) {
       console.error("Notes generation failed:", error);
       setErrorMessage(error?.message || "Could not generate notes.");
     } finally {
+      window.clearInterval(writingProgressTimer);
       setIsGenerating(false);
       setGenerationStatus("");
+      setGenerationProgress(0);
     }
   };
 
@@ -687,6 +703,32 @@ function NotesGenerator({ initialMaterial = null }) {
                   {isGenerating && <LoaderCircle size={16} className="animate-spin" />}
                   {isGenerating ? generationStatus : "Generate notes"}
                 </button>
+
+                {isGenerating && (
+                  <div className="mt-3" aria-live="polite">
+                    <div className="mb-1.5 flex items-center justify-between gap-3">
+                      <span className="inter-font text-[11px] text-zinc-500 dark:text-zinc-400">
+                        AI is preparing your notes
+                      </span>
+                      <span className="ibm-mono text-[10px] text-zinc-400">
+                        {generationProgress}%
+                      </span>
+                    </div>
+                    <div
+                      role="progressbar"
+                      aria-label="Notes generation progress"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                      aria-valuenow={generationProgress}
+                      className="h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800"
+                    >
+                      <div
+                        className="h-full rounded-full bg-zinc-950 transition-[width] duration-500 ease-out dark:bg-white"
+                        style={{ width: `${generationProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
 
               </div>
                 {showGuide && (

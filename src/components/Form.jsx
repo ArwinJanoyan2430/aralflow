@@ -106,7 +106,7 @@ function Form({
       
       <section
         id="how-it-works"
-        className="px-4 transition-colors duration-300 bg-zinc-50 max-x-1xl pb-20 pt-0 sm:px-10 lg:px-80 dark:bg-zinc-950"
+        className="mx-auto w-full max-w-6xl bg-zinc-50 px-4 pb-24 pt-8 transition-colors duration-300 dark:bg-zinc-950 sm:px-6 lg:px-8"
       >
         <div className="text-center">
           <p className="ibm-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
@@ -114,12 +114,12 @@ function Form({
           </p>
 
           <h2 className="pixel-font mt-3 text-2xl tracking-tight text-zinc-900 dark:text-white sm:text-3xl">
-            From notes to practice.
+            From PDF to study-ready.
           </h2>
 
           <p className="inter-font mx-auto mt-3 max-w-xl text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-            AralFlow turns your study materials into practice exams in just a
-            few simple steps.
+            Upload your material once, choose how you want to study, and let
+            AralFlow prepare the rest.
           </p>
         </div>
 
@@ -137,12 +137,12 @@ function Form({
             </div>
 
             <h3 className="pixel-font mt-6 text-base text-zinc-900 dark:text-white">
-              Upload your notes
+              Add your material
             </h3>
 
             <p className="inter-font mt-3 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-              Upload your PDF study material. AralFlow securely processes the
-              content so it can understand what you need to study.
+              Upload lecture notes, reviewers, or any readable PDF. Your file
+              stays available in your study library for later.
             </p>
           </div>
 
@@ -159,12 +159,12 @@ function Form({
             </div>
 
             <h3 className="pixel-font mt-6 text-base text-zinc-900 dark:text-white">
-              Generate your exam
+              Choose your study tool
             </h3>
 
             <p className="inter-font mt-3 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-              Choose how many questions you want and let AralFlow generate a
-              practice exam based on your uploaded material.
+              Create a custom practice exam or turn the same material into
+              concise, balanced, or detailed AI notes.
             </p>
           </div>
 
@@ -181,32 +181,32 @@ function Form({
             </div>
 
             <h3 className="pixel-font mt-6 text-base text-zinc-900 dark:text-white">
-              Practice & improve
+              Study and improve
             </h3>
 
             <p className="inter-font mt-3 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-              Take your interactive practice exam, review your answers, and
-              retake saved exams whenever you want.
+              Review generated notes, answer interactive questions, and return
+              to saved study materials whenever you need another session.
             </p>
           </div>
         </div>
       </section>
 
       <section
-        className="px-4 transition-colors duration-300 bg-zinc-50 max-x-1xl pb-30 pt-0 sm:px-10 lg:px-80 dark:bg-zinc-950"
+        className="mx-auto w-full max-w-6xl bg-zinc-50 px-4 pb-28 transition-colors duration-300 dark:bg-zinc-950 sm:px-6 lg:px-8"
       >
         <div className="text-center">
           <p className="ibm-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
-            Featured
+            Study toolkit
           </p>
 
           <h2 className="pixel-font mt-3 text-2xl tracking-tight text-zinc-900 dark:text-white sm:text-3xl">
-            Everything you need to study better.
+            One material, multiple ways to learn.
           </h2>
 
           <p className="inter-font mx-auto mt-3 max-w-xl text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-            Simple tools designed to turn your study materials into effective
-            exam preparation.
+            Build active-recall practice and clear study notes directly from
+            the PDFs you already use.
           </p>
         </div>
 
@@ -218,12 +218,12 @@ function Form({
             </div>
 
             <h3 className="pixel-font mt-6 text-base text-zinc-900 dark:text-white">
-              AI-generated exams
+              Practice exams
             </h3>
 
             <p className="inter-font mt-3 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-              Turn your PDFs into customized practice questions using the
-              content of your own study materials.
+              Generate 10 to 150 multiple-choice questions grounded in your
+              material, with answers and explanations included.
             </p>
           </div>
 
@@ -234,12 +234,12 @@ function Form({
             </div>
 
             <h3 className="pixel-font mt-6 text-base text-zinc-900 dark:text-white">
-              PDF-based studying
+              AI study notes
             </h3>
 
             <p className="inter-font mt-3 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-              Upload your lecture notes, reviewers, and other PDF materials and
-              keep everything organized in one place.
+              Create reviewer, outline, or beginner-friendly notes and choose
+              the level of detail that fits your study session.
             </p>
           </div>
 
@@ -250,12 +250,12 @@ function Form({
             </div>
 
             <h3 className="pixel-font mt-6 text-base text-zinc-900 dark:text-white">
-              Retake anytime
+              Saved study library
             </h3>
 
             <p className="inter-font mt-3 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-              Your generated exams are saved so you can return to them and
-              practice whenever you need.
+              Keep PDFs, generated exams, and notes together so your study
+              resources are ready whenever you come back.
             </p>
           </div>
         </div>
