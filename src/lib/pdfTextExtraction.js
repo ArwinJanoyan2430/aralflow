@@ -1,4 +1,7 @@
-import PdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?worker";
+// Use PDF.js's compatibility build so PDF uploads also work in Safari/iOS
+// versions that do not yet implement the newest Iterator, Map, and Promise
+// APIs used by the modern build.
+import PdfWorker from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?worker";
 
 const MAX_CHARACTERS_PER_PAGE = 4_000;
 const MIN_EMBEDDED_TEXT_CHARACTERS = 30;
@@ -11,7 +14,7 @@ const normalizeText = (text) => text.replace(/\s+/g, " ").trim();
 export const extractPdfPageSections = async (file, onProgress) => {
   // PDF.js is large, so load it only when the user processes a PDF instead of
   // including it in the app's initial JavaScript bundle.
-  const pdfjs = await import("pdfjs-dist");
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   // Let Vite create and serve the worker. Passing a URL to PDF.js can make the
   // dev server resolve it as a normal dynamic import (`?import`), which causes
   // PDF.js to fall back to its fake worker when that request fails.
