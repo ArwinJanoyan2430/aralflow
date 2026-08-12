@@ -116,7 +116,10 @@ async function generateQuestionBatch(
 
   if (!response.ok) {
     const responseBody = await response.text();
-    const retryAfterSeconds = Number(response.headers.get("retry-after"));
+    const retryAfterHeader = response.headers.get("retry-after");
+    const retryAfterSeconds = retryAfterHeader === null
+      ? Number.NaN
+      : Number(retryAfterHeader);
     throw new GeminiRequestError(
       `Gemini request failed (${response.status}): ${responseBody}`,
       response.status,
